@@ -6,3 +6,7 @@
 [Shopping Reviews Sentiment Analysis](https://buptldy.github.io/2016/07/20/2016-07-20-sentiment%20analysis/)
 
 [句法分析在NLP中的作用](https://www.zhihu.com/question/39034550)
+
+[数据集合下载](http://dataju.cn/Dataju/web/dataDescriptionAndDataset)
+
+[集智社区](https://jizhi.im/community/discuss/2017-03-13-10-9-2-pm)
