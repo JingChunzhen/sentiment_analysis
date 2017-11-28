@@ -10,3 +10,5 @@
 [数据集合下载](http://dataju.cn/Dataju/web/dataDescriptionAndDataset)
 
 [集智社区](https://jizhi.im/community/discuss/2017-03-13-10-9-2-pm)
+
+[Hierachical RNN](http://n-s-f.github.io/2017/07/10/rnn-tensorflow.html)
