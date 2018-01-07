@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 
 import numpy as np
@@ -7,8 +8,8 @@ from tensorflow.contrib import learn
 
 
 def convert_to_sqlite(file_in, sql_path):
-    '''
-    convert the csv to db file (sqlite)
+    '''    
+    depreated, convert the csv to db file (sqlite)
     Args:
         file_in (string)
         sql_path (string)
@@ -37,7 +38,6 @@ def statistics_amazon():
     '''
     statistics for amazon unlocked phones 
     '''
-
     df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
 
     print(df['Rating'].count())  # 413840
@@ -54,47 +54,70 @@ def statistics_amazon():
     print(df[(df['Rating'] == 4)]['Reviews'].count())  # 61392
     print(df[(df['Rating'] == 5)]['Reviews'].count())  # 223605
 
-    for _, row in df.iterrows():
-        print(type(row['Reviews']))  # str
-        break
+    # row['Reviews'] -> str    
 
-# 针对数据预处理，进行learn.preprocessing.VocabularyProcessor
-# 将词语转换成一个词的id
-# 生成训练数据
-# 使用Embedding_layer
+def clean_str(string):
+    """
+    Tokenization/string cleaning for all datasets except for SST.
+    Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
+    this is very crude
+    """
+    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    string = re.sub(r",", " , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " \( ", string)
+    string = re.sub(r"\)", " \) ", string)
+    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+    return string.strip().lower()
 
-
-def statistics_max_length():
+def load_data():
     '''
-    查到最大的文档长度    
+    load data from csv file of Amazon Unlocked Mobile 
     '''
-    processor = learn.preprocessing.VocabularyProcessor
-    # tf.keras.preprocessing.text.text_to_word_sequence()
+    # get data from csv file 
+    df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
+    df = df[ df['Rating'] != 3 ]
 
-    pass
+    # data
+    x = df['Reviews'].tolist()    
+    text_x = [clean_str(text) for text in x]
+    max_document_length = max(text.split(' ') for text in text_x)    
+    processor = learn.preprocessing.VocabularyProcessor(max_document_length)    
 
+    # label
+    y = df['Rating'].tolist()
+    text_y = []
+    for rating in y:
+        text_y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
 
-def batch_iter(batch_size):
-    '''
-    Args:
-        batch_size (int) stored in yaml
-    Returns:
-        X ():
-        Y ():
-    '''
-    x = []
-    y = []
-    df = pd.read_csv()
-    for _, row in df.iterrows():
-        '''
-        '''
-        yield x, y
+    return np.array(list(processor.fit_transform(text_x))), np.array(text_y)            
 
 
-#from tensorflow.contrib import learn
-learn.preprocessing.VocabularyProcessor
-learn.preprocessing.VocabularyProcessor
-# 在loss中增加对于类别不平衡的处理（同时）详看之前看故的论文
-if __name__ == '__main__':
-    statistics_amazon()
-    pass
+def batch_iter(data, batch_size, num_epochs, shuffle=True):
+    """
+    Generates a batch iterator for a dataset.
+    """
+    data = np.array(data)
+    data_size = len(data)
+    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    for epoch in range(num_epochs):
+        # Shuffle the data at each epoch
+        if shuffle:
+            shuffle_indices = np.random.permutation(np.arange(data_size))
+            shuffled_data = data[shuffle_indices]
+        else:
+            shuffled_data = data
+        for batch_num in range(num_batches_per_epoch):
+            start_index = batch_num * batch_size
+            end_index = min((batch_num + 1) * batch_size, data_size)
+            yield shuffled_data[start_index:end_index]
+
+
+
