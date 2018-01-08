@@ -7,9 +7,80 @@ import pandas as pd
 from tensorflow.contrib import learn
 
 
+def clean_str(string):
+    """
+    Tokenization/string cleaning for all datasets except for SST.
+    Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
+    this is very crude
+    """
+    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    string = re.sub(r",", " , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " \( ", string)
+    string = re.sub(r"\)", " \) ", string)
+    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+    return string.strip().lower()
+
+
+def load_data():
+    '''
+    tested 
+    load data from csv file of Amazon Unlocked Mobile 
+    rid nans 
+    Returns:
+        x (list) shape (nums of data, str length)
+        y (list) shape (nums of data, 2)
+    '''
+    # load
+    df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
+    df = df[df['Rating'] != 3][['Reviews', 'Rating']]
+    df = df.dropna(axis=0, how="any")
+
+    # data
+    Reviews = df['Reviews'].tolist()
+    x = [clean_str(review) for review in Reviews]
+
+    # label
+    Ratings = df['Rating'].tolist()
+    y = []
+    [y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
+     for rating in Ratings]
+
+    return x, y
+
+
+def batch_iter(data, batch_size, num_epochs, shuffle=True):
+    """
+    need to be tested 
+    Generates a batch iterator for a dataset.
+    """
+    data = np.array(data)
+    data_size = len(data)
+    num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
+    for epoch in range(num_epochs):
+        # Shuffle the data at each epoch
+        if shuffle:
+            shuffle_indices = np.random.permutation(np.arange(data_size))
+            shuffled_data = data[shuffle_indices]
+        else:
+            shuffled_data = data
+        for batch_num in range(num_batches_per_epoch):
+            start_index = batch_num * batch_size
+            end_index = min((batch_num + 1) * batch_size, data_size)
+            yield shuffled_data[start_index:end_index]
+
+
 def convert_to_sqlite(file_in, sql_path):
     '''    
-    depreated, convert the csv to db file (sqlite)
+    depreated
+    convert the csv to db file (sqlite)
     Args:
         file_in (string)
         sql_path (string)
@@ -36,6 +107,7 @@ def convert_to_sqlite(file_in, sql_path):
 
 def statistics_amazon():
     '''
+    deprecated 
     statistics for amazon unlocked phones 
     '''
     df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
@@ -54,70 +126,15 @@ def statistics_amazon():
     print(df[(df['Rating'] == 4)]['Reviews'].count())  # 61392
     print(df[(df['Rating'] == 5)]['Reviews'].count())  # 223605
 
-    # row['Reviews'] -> str    
-
-def clean_str(string):
-    """
-    Tokenization/string cleaning for all datasets except for SST.
-    Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
-    this is very crude
-    """
-    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
-    string = re.sub(r"\'s", " \'s", string)
-    string = re.sub(r"\'ve", " \'ve", string)
-    string = re.sub(r"n\'t", " n\'t", string)
-    string = re.sub(r"\'re", " \'re", string)
-    string = re.sub(r"\'d", " \'d", string)
-    string = re.sub(r"\'ll", " \'ll", string)
-    string = re.sub(r",", " , ", string)
-    string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " \( ", string)
-    string = re.sub(r"\)", " \) ", string)
-    string = re.sub(r"\?", " \? ", string)
-    string = re.sub(r"\s{2,}", " ", string)
-    return string.strip().lower()
-
-def load_data():
-    '''
-    load data from csv file of Amazon Unlocked Mobile 
-    '''
-    # get data from csv file 
-    df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
-    df = df[ df['Rating'] != 3 ]
-
-    # data
-    x = df['Reviews'].tolist()    
-    text_x = [clean_str(text) for text in x]
-    max_document_length = max(text.split(' ') for text in text_x)    
-    processor = learn.preprocessing.VocabularyProcessor(max_document_length)    
-
-    # label
-    y = df['Rating'].tolist()
-    text_y = []
-    for rating in y:
-        text_y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
-
-    return np.array(list(processor.fit_transform(text_x))), np.array(text_y)            
+    # row['Reviews'] -> str
 
 
-def batch_iter(data, batch_size, num_epochs, shuffle=True):
-    """
-    Generates a batch iterator for a dataset.
-    """
-    data = np.array(data)
-    data_size = len(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
-    for epoch in range(num_epochs):
-        # Shuffle the data at each epoch
-        if shuffle:
-            shuffle_indices = np.random.permutation(np.arange(data_size))
-            shuffled_data = data[shuffle_indices]
-        else:
-            shuffled_data = data
-        for batch_num in range(num_batches_per_epoch):
-            start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, data_size)
-            yield shuffled_data[start_index:end_index]
+if __name__ == '__main__':
+    x, y = load_data()
 
+    max_document_length = max([len(text.split(' ')) for text in x])
+    processor = learn.preprocessing.VocabularyProcessor(max_document_length)
+    res = processor.fit_transform(x)
+    res_list = list(res)
 
-
+    print(len(res_list))
