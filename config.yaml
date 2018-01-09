@@ -10,6 +10,14 @@ CNN:
   filter_sizes: 2,3,5  
   l2_reg_lambda: 0
   
-GRU:
+RNN:
+  num_classes: 2
+  hidden_size: 128
+  num_layers: 4
+  l2_reg_lambda: 0
+  cell_type: GRU
+  bi-directional: True
+  attention: True
+
 
   

@@ -1,9 +1,12 @@
 import os
 import re
 import sqlite3
+import time
+import pickle
 
 import numpy as np
 import pandas as pd
+from pyecharts import Line
 from tensorflow.contrib import learn
 
 
@@ -97,7 +100,7 @@ def convert_to_sqlite(file_in, sql_path):
         if row['Rating'] == 3:
             continue
         else:
-            polarity = 1 if row['Raing'] == 4 or row['Rating'] == 5 else 0
+            polarity = 1 if row['Rating'] == 4 or row['Rating'] == 5 else 0
             data.append((row['Review'], polarity))
 
     c.executemany('INSERT INTO amazon_mobiles VALUES (?,?)', data)
@@ -129,12 +132,76 @@ def statistics_amazon():
     # row['Reviews'] -> str
 
 
-if __name__ == '__main__':
+def statistics_processor():            
     x, y = load_data()
+    l = [len(text.split(' ')) for text in x]
+    max_document_length = max(l)
 
-    max_document_length = max([len(text.split(' ')) for text in x])
-    processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-    res = processor.fit_transform(x)
-    res_list = list(res)
+    print("max document length: {}".format(max_document_length)) # 5655
+    print("mean document length: {}".format(np.mean(l))) # 42.41
+    print("median document length: {}".format(np.median(l))) # 18.0
 
-    print(len(res_list))
+    processor = learn.preprocessing.VocabularyProcessor(max_document_length)    
+    document_list = list(processor.fit_transform(x))
+
+    print("data size: {}".format(len(document_list))) # 382015
+    print("vocab size： {}".format(len(processor.vocabulary_))) # 65434
+
+    reviews_num = {}
+
+    for length in l:        
+        if length not in reviews_num:
+            reviews_num[length] = 1
+        else:
+            reviews_num[length] += 1
+         
+    line = Line("")    
+    axis0 = []
+    axis1 = []
+    sorted(reviews_num.items(), key=lambda d: d[0])
+    for k, v in reviews_num.items():
+        axis0.append(k)
+        axis1.append(v)
+    
+    with open("../temp/reviews_num.pkl", 'wb') as f:
+        pickle.dump(reviews_num, f)
+
+    line.add("评论长度人数", axis0, axis1)        
+    time_stamp = time.strftime("_%Y-%m-%d_%H:%M:%S", time.localtime())
+    file_name = "statistics_for_doc_length" + time_stamp    
+    line.render('../doc/{}'.format(file_name) + '.html')        
+
+
+def optimize_max_document_length():
+    '''
+    To find the optimum max_document_length
+    get the graph in ../temp/statistics_for_num_percentage.html
+    '''
+    with open('../temp/reviews_num.pkl', 'rb') as f:
+        reviews_num = pickle.load(f)
+    
+    data_size = 382015
+    reviews_percentage = {}
+    s = 0
+    for k, v in reviews_num.items():
+        s += v
+        percentage = s * 1.0 / data_size
+        reviews_percentage[k] = percentage
+        
+    line = Line("")    
+    axis0 = []
+    axis1 = []
+
+    for k, v in reviews_percentage.items():
+        axis0.append(k)
+        axis1.append(v)
+    
+    line.add("评论长度百分比", axis0, axis1)        
+    time_stamp = time.strftime("_%Y-%m-%d_%H:%M:%S", time.localtime())
+    file_name = "statistics_for_num_percentage" + time_stamp    
+    line.render('../doc/{}'.format(file_name) + '.html')  
+
+if __name__ == '__main__':    
+    # statistics_processor()
+    optimize_max_document_length()
+
