@@ -21,6 +21,7 @@ def test_vocab_processor():
     res = list(res)  # generator -> list
 
     print(np.shape(res))
+    
     for text in res:
         print(text)  # get list of word ids
 
@@ -43,6 +44,7 @@ def test_calc_seq_len():
     res = [a.tolist() for a in res] # 转换之后可以成功运行
     print(type(res), type(res[0])) # list np.ndarray
     mask = tf.sign(res)
+    # tf.sign的参数只可以使用list(list)的参数 如果参数为list(array)则会报错
     print(mask)
     
     range_ = tf.range(start=1, limit=max_document_length + 1, dtype=tf.int32)
@@ -58,53 +60,53 @@ def test_calc_seq_len():
         print(r)
         print(m1)
         print(sl)
-    
 
 
-def test_tf_sign():
-    x = [1, 2, 4, 8, 1, 2, 5, 0, 0, 0, 0, 0, 2, 5, 4, 6]
-    res = tf.sign(x)
-    print(res) # shape (16, ) dtype = int32 
-    print(type(res))
+def test_model():
+    '''
+    test model  
+    '''
+    import pandas as pd
+    from tensorflow.contrib import learn
+    import sys
+    sys.path.append("..")
+    from rnn.rnn_model import RNN
+    df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
+    df = df[:10]
+    df = df[df['Rating'] != 3][['Reviews', 'Rating']]
+    x = df['Reviews']
+    Ratings = df['Rating'].tolist()
+    y = []
+    [y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
+        for rating in Ratings] 
+    max_document_length = 163 
+    processor = learn.preprocessing.VocabularyProcessor(max_document_length)
+    x = list(processor.fit_transform(x))
+    x = [l.tolist() for l in x]
 
-    x = 0
-    res = tf.sign(x)
-    print(res)
-    print(type(res))
+    rnn = RNN(              
+        sequence_length=max_document_length,
+        num_classes=2,
+        embedding_size=100,
+        vocab_size=len(processor.vocabulary_),
+        hidden_size=128,
+        num_layers=4,
+        l2_reg_lambda=0
+    )
 
-    x = 1
-    res = tf.sign(x)
-    print(res)
-    print(type(res))
-
-    x = [
-        [1,2,3,4,0,6,7,8,9,0],
-        [0,0,0,0,0,2,3,1,5,1]
-    ]    
-    res = tf.sign(x) # 使用sign转换只能使用list list 不能使用array
-    print(res) # Tensor shape (2, 10) dtype = int32
-    print(type(res))
-
-    x = [
-        np.array([1,2,3,4,0,6,7,8,9,0]),
-        np.array([0,0,0,0,0,2,3,1,5,1])
-    ]
-    res = tf.sign(x) # error occurred 
-    print(x)
-    print(res) 
-    print(type(res))
-
-def test():
-    x = [
-        np.array([1,2,3,4,0,6,7,8,9,0]),
-        np.array([0,0,0,0,0,2,3,1,5,1])
-    ]   
-    # x x[0] 均可以迭代
-    return hasattr(x[0], '__iter__') 
-
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        ecs, ls = sess.run(
+            [rnn.embedded_chars, rnn.loss],
+            feed_dict={
+                rnn.input_x:x,
+                rnn.input_y:y,
+                rnn.input_keep_prob:1.0,
+                rnn.output_keep_prob:1.0
+            }
+        )
 
 if __name__ == "__main__":
-    # test_calc_seq_len()
-    from tensorflow.nn import GRU
-    # test_tf_sign()
-    # print(test())
+    test_model()
+

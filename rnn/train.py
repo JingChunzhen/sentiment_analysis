@@ -23,13 +23,12 @@ class EVAL(object):
         '''
         tested 
         get the map of word to ids 
-        get the split of train, dev and test data and labels        
-        # TODO: 效果可视化 tensorboard
-        # TODO: 模型保存和加载 
+        get the split of train, dev and test data and labels                
         '''
         raw_x, y = load_data()
         self.max_document_length = 163 
         # optimum max_document_length coming from ../test/statistics 
+        # processor.restore(file_path)
         self.processor = learn.preprocessing.VocabularyProcessor(
             self.max_document_length)
         x = list(self.processor.fit_transform(raw_x))
@@ -44,14 +43,16 @@ class EVAL(object):
 
     def process(self, learning_rate, batch_size, epochs, evaluate_every):
 
-        with tf.Graph().as_default():
+        with tf.Graph().as_default(): 
 
-            rnn = RNN(                
+            rnn = RNN(              
+                sequence_length=self.max_document_length,  
                 num_classes=params["num_classes"],
                 embedding_size=params_Global["embedding_size"],
                 vocab_size=len(self.processor.vocabulary_),
                 hidden_size=params["hidden_size"],
-                num_layers=params["num_layers"]
+                num_layers=params["num_layers"],
+                l2_reg_lambda=params["l2_reg_lambda"]
             )
 
             global_step = tf.Variable(0, trainable=False)
@@ -65,7 +66,8 @@ class EVAL(object):
                     feed_dict = {
                         rnn.input_x: x_batch,
                         rnn.input_y: y_batch, 
-                        rnn.dropout_keep_prob: params["dropout_keep_prob"]
+                        rnn.input_keep_prob: params["input_keep_prob"],
+                        rnn.output_keep_prob: params["output_keep_prob"]                        
                     }
                     _, step, accuracy_, loss_ = sess.run(
                         [train_op, global_step, rnn.accuracy, rnn.loss], feed_dict=feed_dict)
@@ -75,7 +77,8 @@ class EVAL(object):
                     feed_dict = {
                         rnn.input_x: x_batch,
                         rnn.input_y: y_batch,
-                        rnn.dropout_keep_prob: 1.0
+                        rnn.input_keep_prob: 1.0,
+                        rnn.output_keep_prob: 1.0
                     }
                     accuracy_, loss_ = sess.run(
                         [rnn.accuracy, rnn.loss], feed_dict=feed_dict)

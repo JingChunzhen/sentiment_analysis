@@ -28,8 +28,9 @@ class EVAL(object):
         # TODO: 模型保存和加载 
         '''
         raw_x, y = load_data()
-        self.max_document_length = max(
-            [len(text.split(' ')) for text in raw_x])
+        # self.max_document_length = max(
+        #     [len(text.split(' ')) for text in raw_x])
+        self.max_document_length = 163
         self.processor = learn.preprocessing.VocabularyProcessor(
             self.max_document_length)
         x = list(self.processor.fit_transform(raw_x))
@@ -66,7 +67,7 @@ class EVAL(object):
                 def train_step(x_batch, y_batch):
                     feed_dict = {
                         cnn.input_x: x_batch,
-                        cnn.input_y: y_batch, xixi
+                        cnn.input_y: y_batch, 
                         cnn.dropout_keep_prob: params["dropout_keep_prob"]
                     }
                     _, step, accuracy_, loss_ = sess.run(
