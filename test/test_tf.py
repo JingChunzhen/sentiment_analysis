@@ -107,6 +107,17 @@ def test_model():
             }
         )
 
+def test_tensordot():    
+    a = np.arange(60).reshape(3,4,5)
+    b = np.arange(24).reshape(4,3,2)
+
+    print(a)
+    print(b)
+    c = np.tensordot(a,b, axes=([1,0],[0,1]))
+    print(c)
+    pass
+
 if __name__ == "__main__":
-    test_model()
+
+    test_tensordot()
 
