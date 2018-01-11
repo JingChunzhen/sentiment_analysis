@@ -1,15 +1,17 @@
 import sys
 sys.path.append('..')
 
+import numpy as np
 import pyecharts
 import sklearn
 import tensorflow as tf
 import yaml
+from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 
 from rnn_model import RNN
 from utils.dp_amazon_mobile import batch_iter, load_data
-from sklearn.model_selection import train_test_split
+
 
 with open('../config.yaml', 'rb') as f:
     param_all = yaml.load(f)
@@ -26,8 +28,8 @@ class EVAL(object):
         get the split of train, dev and test data and labels                
         '''
         raw_x, y = load_data()
-        self.max_document_length = 163 
-        # optimum max_document_length coming from ../test/statistics 
+        self.max_document_length = 163
+        # optimum max_document_length coming from ../test/statistics
         # processor.restore(file_path)
         self.processor = learn.preprocessing.VocabularyProcessor(
             self.max_document_length)
@@ -43,10 +45,10 @@ class EVAL(object):
 
     def process(self, learning_rate, batch_size, epochs, evaluate_every):
 
-        with tf.Graph().as_default(): 
+        with tf.Graph().as_default():
 
-            rnn = RNN(              
-                sequence_length=self.max_document_length,  
+            rnn = RNN(
+                sequence_length=self.max_document_length,
                 num_classes=params["num_classes"],
                 embedding_size=params_Global["embedding_size"],
                 vocab_size=len(self.processor.vocabulary_),
@@ -65,9 +67,9 @@ class EVAL(object):
                 def train_step(x_batch, y_batch):
                     feed_dict = {
                         rnn.input_x: x_batch,
-                        rnn.input_y: y_batch, 
+                        rnn.input_y: y_batch,
                         rnn.input_keep_prob: params["input_keep_prob"],
-                        rnn.output_keep_prob: params["output_keep_prob"]                        
+                        rnn.output_keep_prob: params["output_keep_prob"]
                     }
                     _, step, accuracy_, loss_ = sess.run(
                         [train_op, global_step, rnn.accuracy, rnn.loss], feed_dict=feed_dict)

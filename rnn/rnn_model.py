@@ -31,7 +31,7 @@ class RNN(object):
 
         l2_loss = tf.constant(0.0)
 
-        with tf.name_scope("embedding"):
+        with tf.name_scope("embedding-layer"):
             self.W = tf.Variable(
                 tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
                 name="W")
@@ -46,7 +46,7 @@ class RNN(object):
             mask = tf.multiply(mask, range_, name="mask")  # element wise
             self.seq_len = tf.reduce_max(mask, axis=1)
 
-        with tf.name_scope("forward_cell"):
+        with tf.name_scope("forward-cell"):
             if num_layers != 1:
                 cells = []
                 for i in range(num_layers):
@@ -64,7 +64,7 @@ class RNN(object):
                     output_keep_prob=self.output_keep_prob
                 )
 
-        with tf.name_scope("backward_cell"):
+        with tf.name_scope("backward-cell"):
             if num_layers != 1:
                 cells = []
                 for i in range(num_layers):
@@ -82,7 +82,7 @@ class RNN(object):
                     output_keep_prob=self.output_keep_prob
                 )
 
-        with tf.name_scope("rnn_with_{}_layers".format(num_layers)):
+        with tf.name_scope("rnn-with-{}-layers".format(num_layers)):
             outputs, _, _ = tf.nn.static_bidirectional_rnn(
                 inputs=self.embedded_chars,
                 cell_fw=self.cell_fw,
@@ -90,12 +90,18 @@ class RNN(object):
                 sequence_length=self.seq_len,
                 dtype=tf.float32
             )
-            # If no initial_state is provided, dtype must be specified
-            self.rnn_output = tf.concat(values=outputs[-1], axis=1)
+            # If no initial_state is provided, dtype must be specified                        
+            # outputs -> type list(tensor) shape: sequence_length, batch_size, hidden_size * 2
+            
+            outputs = tf.stack(outputs)
+            outputs = tf.transpose(outputs, [1, 0, 2])
+            batch_size = tf.shape(outputs)[0]
+            index = tf.range(0, batch_size) * sequence_length + (self.seq_len - 1)
+            self.rnn_output = tf.gather(tf.reshape(outputs, [-1, hidden_size * 2]), index)            
 
-        with tf.name_scope("fully_connected_layer"):
+        with tf.name_scope("fully-connected-layer"):
             W = tf.Variable(tf.truncated_normal(
-                [hidden_size * 2, 2], stddev=0.1), name="W")
+                [hidden_size * 2, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
