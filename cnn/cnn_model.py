@@ -32,7 +32,7 @@ class CNN(object):
         l2_loss = tf.constant(0.0)
 
         # Embedding layer
-        with tf.name_scope("embedding"):
+        with tf.name_scope("embedding-layer"):
             self.W = tf.Variable(
                 tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
                 name="W")

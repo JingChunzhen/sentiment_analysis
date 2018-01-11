@@ -1,15 +1,17 @@
 import sys
 sys.path.append('..')
 
+import numpy as np
 import pyecharts
 import sklearn
 import tensorflow as tf
 import yaml
+from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 
 from cnn_model import CNN
 from utils.dp_amazon_mobile import batch_iter, load_data
-from sklearn.model_selection import train_test_split
+
 
 with open('../config.yaml', 'rb') as f:
     param_all = yaml.load(f)
@@ -67,7 +69,7 @@ class EVAL(object):
                 def train_step(x_batch, y_batch):
                     feed_dict = {
                         cnn.input_x: x_batch,
-                        cnn.input_y: y_batch, 
+                        cnn.input_y: y_batch,
                         cnn.dropout_keep_prob: params["dropout_keep_prob"]
                     }
                     _, step, accuracy_, loss_ = sess.run(
