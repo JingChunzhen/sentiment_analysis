@@ -45,19 +45,20 @@ def load_data():
     df = pd.read_csv('../data/Amazon_Unlocked_Mobile.csv')
     df = df[df['Rating'] != 3][['Reviews', 'Rating']]
     df = df.dropna(axis=0, how="any")
+    
+    x = [] # data 
+    y = [] # label
 
-    # data
-    Reviews = df['Reviews'].tolist()
-    x = [clean_str(review) for review in Reviews]
-
-    # label
-    Ratings = df['Rating'].tolist()
-    y = []
-    [y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
-     for rating in Ratings]
-
+    for _, row in df.iterrows():
+        review = row['Reviews']
+        rating = row['Rating']
+        review = clean_str(review)
+        tmp = review.strip().replace(" ", '')
+        if len(tmp) != 0:
+            x.append(review)
+            y.append([0, 1] if rating == 1 or rating == 2 else [1, 0])
+    
     return x, y
-
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
@@ -144,32 +145,33 @@ def statistics_processor():
     processor = learn.preprocessing.VocabularyProcessor(max_document_length)    
     document_list = list(processor.fit_transform(x))
 
-    print("data size: {}".format(len(document_list))) # 382015
+    print("data size: {}".format(len(document_list))) 
+    # 382015 trim the empty review get data size 381643
     print("vocab size： {}".format(len(processor.vocabulary_))) # 65434
 
-    reviews_num = {}
+    # reviews_num = {}
 
-    for length in l:        
-        if length not in reviews_num:
-            reviews_num[length] = 1
-        else:
-            reviews_num[length] += 1
+    # for length in l:        
+    #     if length not in reviews_num:
+    #         reviews_num[length] = 1
+    #     else:
+    #         reviews_num[length] += 1
          
-    line = Line("")    
-    axis0 = []
-    axis1 = []
-    sorted(reviews_num.items(), key=lambda d: d[0])
-    for k, v in reviews_num.items():
-        axis0.append(k)
-        axis1.append(v)
+    # line = Line("")    
+    # axis0 = []
+    # axis1 = []
+    # sorted(reviews_num.items(), key=lambda d: d[0])
+    # for k, v in reviews_num.items():
+    #     axis0.append(k)
+    #     axis1.append(v)
     
-    with open("../temp/reviews_num.pkl", 'wb') as f:
-        pickle.dump(reviews_num, f)
+    # with open("../temp/reviews_num.pkl", 'wb') as f:
+    #     pickle.dump(reviews_num, f)
 
-    line.add("评论长度人数", axis0, axis1)        
-    time_stamp = time.strftime("_%Y-%m-%d_%H:%M:%S", time.localtime())
-    file_name = "statistics_for_doc_length" + time_stamp    
-    line.render('../doc/{}'.format(file_name) + '.html')        
+    # line.add("评论长度人数", axis0, axis1)        
+    # time_stamp = time.strftime("_%Y-%m-%d_%H:%M:%S", time.localtime())
+    # file_name = "statistics_for_doc_length" + time_stamp    
+    # line.render('../doc/{}'.format(file_name) + '.html')        
 
 
 def optimize_max_document_length():
@@ -201,7 +203,5 @@ def optimize_max_document_length():
     file_name = "statistics_for_num_percentage" + time_stamp    
     line.render('../doc/{}'.format(file_name) + '.html')  
 
-if __name__ == '__main__':    
-    # statistics_processor()
-    optimize_max_document_length()
-
+if __name__ == "__main__":
+    statistics_processor()
