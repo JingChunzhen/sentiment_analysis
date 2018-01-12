@@ -22,5 +22,8 @@ RNN:
   output_keep_prob: 1.0
   l2_reg_lambda: 0
 
+NBOW:
+  num_classes: 2
+  l2_reg_lamda: 0
 
   
