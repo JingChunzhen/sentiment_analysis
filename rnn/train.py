@@ -10,13 +10,13 @@ from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 
 from rnn_model import RNN
-from utils.dp_amazon_mobile import batch_iter, load_data
+from utils.data_parser import batch_iter, load_data
 
 
 with open('../config.yaml', 'rb') as f:
     param_all = yaml.load(f)
     params = param_all["RNN"]
-    params_Global = param_all["Global"]
+    params_global = param_all["Global"]
 
 
 class EVAL(object):
@@ -27,7 +27,7 @@ class EVAL(object):
         get the map of word to ids 
         get the split of train, dev and test data and labels                
         '''
-        raw_x, y = load_data()
+        raw_x, y = load_data(params_global["task"], params_global["num_classes"])
         self.max_document_length = 163
         # optimum max_document_length coming from ../test/statistics
         # processor.restore(file_path)
@@ -36,9 +36,9 @@ class EVAL(object):
         x = list(self.processor.fit_transform(raw_x))
         x = [l.tolist() for l in x]
         x_temp, self.x_test, y_temp, self.y_test = train_test_split(
-            x, y, test_size=params_Global["test_size"])
+            x, y, test_size=params_global["test_size"])
         self.x_train, self.x_validate, self.y_train, self.y_validate = train_test_split(
-            x_temp, y_temp, test_size=params_Global["validate_size"])
+            x_temp, y_temp, test_size=params_global["validate_size"])
 
         # free
         del x_temp, y_temp, raw_x, x, y
@@ -49,8 +49,8 @@ class EVAL(object):
 
             rnn = RNN(
                 sequence_length=self.max_document_length,
-                num_classes=params["num_classes"],
-                embedding_size=params_Global["embedding_size"],
+                num_classes=params_global["num_classes"],
+                embedding_size=params_global["embedding_size"],
                 vocab_size=len(self.processor.vocabulary_),
                 hidden_size=params["hidden_size"],
                 num_layers=params["num_layers"],
