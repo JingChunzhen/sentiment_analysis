@@ -6,6 +6,7 @@ import pyecharts
 import sklearn
 import tensorflow as tf
 import yaml
+from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 
@@ -113,6 +114,6 @@ if __name__ == "__main__":
     eval.process(
         learning_rate=1e-3,
         batch_size=128,
-        epochs=10,
+        epochs=100,
         evaluate_every=1000
     )

@@ -7,6 +7,7 @@ import sklearn
 import tensorflow as tf
 import yaml
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 from tensorflow.contrib import learn
 
 from nbow_model import NBOW
@@ -116,6 +117,6 @@ if __name__ == "__main__":
     eval.process(
         learning_rate=1e-3,
         batch_size=128,
-        epochs=10,
+        epochs=100,
         evaluate_every=1000
     )
