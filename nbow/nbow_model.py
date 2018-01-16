@@ -6,13 +6,14 @@ class NBOW(object):
     Neural Bag of Words
     '''
 
-    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, l2_reg_lambda):
+    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, weighted, l2_reg_lambda):
         '''
         Args:
             sequence_length (int):
             num_classes (int):
             vocab_size (int):
             embedding_size (int):
+            weighted (boolean): 
             l2_reg_lamda (float)：
         '''
         self.input_x = tf.placeholder(
@@ -28,6 +29,20 @@ class NBOW(object):
                 name="W")
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
 
+        if weighted:
+            with tf.name_scope("weighted"):
+                w = tf.Variable(tf.random_uniform([1, embedding_size, 1]), name="weight")
+                w = tf.tile(w, multiples=[tf.shape(self.input_x)[0], 1, 1])
+                # batch_size, embedding_size, 1
+                w = tf.matmul(self.embedded_chars, w)
+                # batch_size, sequence_length, 1
+                w = tf.nn.sigmoid(w)
+                # batch_size, sequence_length, 1
+                w = tf.tile(w, multiples=[1, 1, embedding_size])
+                # batch_size, sequence_length, embedding_size
+                self.embedded_chars = tf.multiply(self.embedded_chars, w)
+                # batch_size, sequence_length, embedding_size
+        
         with tf.name_scope("averaging-layer"):
             mask = tf.sign(self.input_x)
             # shape: batch_size, sequence_length            

@@ -23,6 +23,7 @@ RNN:
   l2_reg_lambda: 0
 
 NBOW:  
-  l2_reg_lamda: 0
+  weighted: True
+  l2_reg_lamda: 0.001
 
   

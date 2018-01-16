@@ -62,6 +62,7 @@ class EVAL(object):
                 num_classes=params_global["num_classes"],
                 vocab_size=len(self.processor.vocabulary_),
                 embedding_size=params_global["embedding_size"],
+                weighted=params["weighted"],
                 l2_reg_lambda=params["l2_reg_lamda"]
             )            
 
