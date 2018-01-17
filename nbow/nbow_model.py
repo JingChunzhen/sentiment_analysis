@@ -7,13 +7,14 @@ class NBOW(object):
     '''
 
     def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, weighted, l2_reg_lambda):
-        '''
+        '''        
         Args:
             sequence_length (int):
             num_classes (int):
             vocab_size (int):
             embedding_size (int):
-            weighted (boolean): 
+            weighted (boolean): Learning Word Importance with the Neural Bag-of-Words Model
+                cf. http://www.aclweb.org/anthology/W/W16/W16-1626.pdf            
             l2_reg_lamda (float)：
         '''
         self.input_x = tf.placeholder(
@@ -29,7 +30,7 @@ class NBOW(object):
                 name="W")
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
 
-        if weighted:
+        if weighted:            
             with tf.name_scope("weighted"):
                 w = tf.Variable(tf.random_uniform([1, embedding_size, 1]), name="weight")
                 w = tf.tile(w, multiples=[tf.shape(self.input_x)[0], 1, 1])
