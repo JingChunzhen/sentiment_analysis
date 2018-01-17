@@ -55,7 +55,10 @@ class EVAL(object):
                 vocab_size=len(self.processor.vocabulary_),
                 hidden_size=params["hidden_size"],
                 num_layers=params["num_layers"],
-                l2_reg_lambda=params["l2_reg_lambda"]
+                l2_reg_lambda=params["l2_reg_lambda"],
+                dynamic=params["dynamic"],
+                use_attention=params["use_attention"],
+                attention_size=params["attention_size"]
             )
 
             global_step = tf.Variable(0, trainable=False)

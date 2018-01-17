@@ -2,12 +2,16 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import MultiRNNCell
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.contrib.rnn import DropoutWrapper
+from attention import attention
 
 
 class RNN(object):
 
-    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, hidden_size, num_layers, l2_reg_lambda):
+    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size,
+                 hidden_size, num_layers, l2_reg_lambda, dynamic, use_attention,
+                 attention_size):
         '''
+        # TODO: dropout layer before fc layer 
         Args:
             sequence_length (int)
             num_classes (int):
@@ -16,6 +20,9 @@ class RNN(object):
             hidden_size (int):
             num_layer (int):
             l2_reg_lambda (float):
+            dynamic (boolean):
+            use_attention (boolean):
+            attention_size (int):
         '''
         self.input_x = tf.placeholder(
             tf.int32, [None, sequence_length], name="x")
@@ -38,6 +45,7 @@ class RNN(object):
             embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.embedded_chars = tf.unstack(
                 embedded_chars, sequence_length, axis=1)
+            # get list (length == sequence_length) of tensors with shape: batch_size, embedding_size
 
         with tf.name_scope("sequence-length"):
             mask = tf.sign(self.input_x)
@@ -82,22 +90,51 @@ class RNN(object):
                     output_keep_prob=self.output_keep_prob
                 )
 
-        with tf.name_scope("rnn-with-{}-layers".format(num_layers)):
-            outputs, _, _ = tf.nn.static_bidirectional_rnn(
-                inputs=self.embedded_chars,
-                cell_fw=self.cell_fw,
-                cell_bw=self.cell_bw,
-                sequence_length=self.seq_len,
-                dtype=tf.float32
-            )
-            # If no initial_state is provided, dtype must be specified                        
-            # outputs -> type list(tensor) shape: sequence_length, batch_size, hidden_size * 2
-            
-            outputs = tf.stack(outputs)
-            outputs = tf.transpose(outputs, [1, 0, 2])
-            batch_size = tf.shape(outputs)[0]
-            index = tf.range(0, batch_size) * sequence_length + (self.seq_len - 1)
-            self.rnn_output = tf.gather(tf.reshape(outputs, [-1, hidden_size * 2]), index)            
+        if dynamic:
+            with tf.name_scope("dynamic-rnn-with-{}-layers".format(num_layers)):
+                outputs, _, _ = tf.nn.static_bidirectional_rnn(
+                    inputs=self.embedded_chars,
+                    cell_fw=self.cell_fw,
+                    cell_bw=self.cell_bw,
+                    sequence_length=self.seq_len,
+                    dtype=tf.float32
+                )
+                # If no initial_state is provided, dtype must be specified
+                # outputs -> type list(tensor) shape: sequence_length, batch_size, hidden_size * 2
+
+                outputs = tf.stack(outputs)
+                outputs = tf.transpose(outputs, [1, 0, 2])
+                # shape: batch_size, sequence_length, hidden_size * 2
+                batch_size = tf.shape(outputs)[0]
+                index = tf.range(0, batch_size) * \
+                    sequence_length + (self.seq_len - 1)
+                self.rnn_output = tf.gather(tf.reshape(
+                    outputs, [-1, hidden_size * 2]), index)
+                # shape: batch_size, hidden_size * 2
+        else:
+            if use_attention:
+                with tf.name_scope("rnn-based-attention-with-{}-layers".format(num_layers)):
+                    outputs, _, _ = tf.nn.static_bidirectional_rnn(
+                        inputs=self.embedded_chars,
+                        cell_fw=self.cell_fw,
+                        cell_bw=self.cell_bw,
+                        dtype=tf.float32
+                    )
+
+                    outputs = tf.stack(outputs)
+                    outputs = tf.transpose(outputs, [1, 0, 2])
+                    self.rnn_output, alpha = attention(outputs, attention_size)
+            else:
+                with tf.name_scope("rnn-with-{}-layers".format(num_layers)):
+                    outputs, _, _ = tf.nn.static_bidirectional_rnn(
+                        inputs=self.embedded_chars,
+                        cell_fw=self.cell_fw,
+                        cell_bw=self.cell_bw,
+                        dtype=tf.float32
+                    )
+                    outputs = tf.stack(outputs)
+                    outputs = tf.transpose(outputs, [1, 0, 2])
+                    self.rnn_output = tf.reduce_sum(outputs, axis=1)
 
         with tf.name_scope("fully-connected-layer"):
             W = tf.Variable(tf.truncated_normal(
