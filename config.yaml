@@ -2,7 +2,8 @@ Global:
   embedding_size: 100
   test_size: 0.2
   validate_size: 0.1
-  task: Twitter_Airlines
+  #task: Twitter_Airlines
+  task: Amazon_Unlocked_Mobile
   num_classes: 3
 
 CNN:
@@ -13,14 +14,15 @@ CNN:
   
 RNN: 
   hidden_size: 128
-  num_layers: 4
-  l2_reg_lambda: 0
+  num_layers: 1
+  l2_reg_lambda: 0.0001
   cell_type: GRU
   bi-directional: True
-  attention: True
+  dynamic: False
+  use_attention: True
+  attention_size: 50
   input_keep_prob: 1.0
-  output_keep_prob: 1.0
-  l2_reg_lambda: 0
+  output_keep_prob: 1.0  
 
 NBOW:  
   weighted: True
