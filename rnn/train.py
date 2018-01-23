@@ -11,6 +11,7 @@ from sklearn.metrics import classification_report
 from tensorflow.contrib import learn
 
 from rnn_model import RNN
+from itertools import chain
 from utils.data_parser import batch_iter, load_data
 
 
@@ -41,8 +42,33 @@ class EVAL(object):
         self.x_train, self.x_validate, self.y_train, self.y_validate = train_test_split(
             x_temp, y_temp, test_size=params_global["validate_size"])
 
+        if params["embedding_init"]:
+            self.embedding_matrix = self._embedding_matrix_initializer()
         # free
         del x_temp, y_temp, raw_x, x, y
+
+    def _embedding_matrix_initializer(self):
+        '''
+        initialize the embedding_layer using GloVe
+        Return:
+            embedding_matrix (matrix with float): shape (vocabulary_size, embedding_size)
+        '''
+        file_wv = "../data/glove.6B/glove.6B.{}d.txt".format(
+            params_global["embedding_size"])
+        wv = {}
+        embedding_matrix = []
+
+        with open(file_wv, 'r') as f:
+            for line in f:
+                line = line.split(' ')
+                word = line[0]
+                wv[word] = list(map(float, line[1:]))
+
+        for idx in range(len(self.processor.vocabulary_)):
+            word = self.processor.vocabulary_.reverse(idx)
+            embedding_matrix.append(
+                wv[word] if word in wv else np.random.normal(size=params_global["embedding_size"]))        
+        return embedding_matrix
 
     def process(self, learning_rate, batch_size, epochs, evaluate_every):
 
@@ -58,7 +84,10 @@ class EVAL(object):
                 l2_reg_lambda=params["l2_reg_lambda"],
                 dynamic=params["dynamic"],
                 use_attention=params["use_attention"],
-                attention_size=params["attention_size"]
+                attention_size=params["attention_size"],
+                embedding_init=params["embedding_init"],                
+                embedding_matrix=list(chain.from_iterable(self.embedding_matrix)),
+                static=params["static"]
             )
 
             global_step = tf.Variable(0, trainable=False)

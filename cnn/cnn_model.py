@@ -9,7 +9,8 @@ class CNN(object):
     Original taken from https://github.com/dennybritz/cnn-text-classification-tf/blob/master/text_cnn.py
     """
 
-    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, filter_sizes, num_filters, l2_reg_lambda=0.0):
+    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, filter_sizes,
+                 num_filters, l2_reg_lambda, embedding_matrix, static, embedding_init):
         '''
         Args:
             sequence_length (int): load_data text_x shape[1]
@@ -19,6 +20,9 @@ class CNN(object):
             filter_sizes (list): from yaml
             num_filters (int): from yaml
             l2_reg_lamda (int): from yaml
+            embedding_init (boolean): True for initialize the embedding layer with glove false for not 
+            embedding_matrix (list of float): length vocabulary size * embedding_size
+            static (boolean): False for embedding_layer trainable during training false True for not 
         '''
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(
@@ -31,14 +35,22 @@ class CNN(object):
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
 
-        # Embedding layer
-        with tf.name_scope("embedding-layer"):
-            self.W = tf.Variable(
-                tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
-                name="W")
-            self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
-            self.embedded_chars_expanded = tf.expand_dims(
-                self.embedded_chars, -1)
+        if embedding_init:
+            with tf.name_scope("embedding-layer-with-glove-initialized"):
+                self.W = tf.get_variable(shape=[vocab_size, embedding_size], initializer=tf.constant_initializer(
+                    embedding_matrix), name='W', trainable=not static)
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
+        else:
+            with tf.name_scope("embedding-layer"):
+                self.W = tf.Variable(
+                    tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
+                    name="W")
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
+
+        self.embedded_chars_expanded = tf.expand_dims(
+            self.embedded_chars, -1)
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
@@ -80,7 +92,7 @@ class CNN(object):
         # Final (unnormalized) scores and predictions
         with tf.name_scope("output"):
             W = tf.get_variable(
-                "W",
+                "fc_w",
                 shape=[num_filters_total, num_classes],
                 initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")

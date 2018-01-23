@@ -6,7 +6,8 @@ class NBOW(object):
     Neural Bag of Words
     '''
 
-    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, weighted, l2_reg_lambda):
+    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, weighted,
+                 l2_reg_lambda, embedding_init, embedding_matrix, static):
         '''        
         Args:
             sequence_length (int):
@@ -16,6 +17,9 @@ class NBOW(object):
             weighted (boolean): Learning Word Importance with the Neural Bag-of-Words Model
                 cf. http://www.aclweb.org/anthology/W/W16/W16-1626.pdf            
             l2_reg_lamda (float)：
+            embedding_init (boolean): True for initialize the embedding layer with glove false for not 
+            embedding_matrix (list of float): length vocabulary size * embedding_size
+            static (boolean): False for embedding_layer trainable during training false True for not 
         '''
         self.input_x = tf.placeholder(
             tf.int32, [None, sequence_length], name="x")
@@ -24,15 +28,24 @@ class NBOW(object):
 
         l2_loss = tf.constant(0.0)
 
-        with tf.name_scope("embedding-layer"):
-            self.W = tf.Variable(
-                tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
-                name="W")
-            self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
+        if embedding_init:
+            with tf.name_scope("embedding-layer-with-glove-initialized"):
+                self.W = tf.get_variable(shape=[vocab_size, embedding_size], initializer=tf.constant_initializer(
+                    embedding_matrix), name='W', trainable=not static)
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
+        else:
+            with tf.name_scope("embedding-layer"):
+                self.W = tf.Variable(
+                    tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
+                    name="W")
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
 
-        if weighted:            
+        if weighted:
             with tf.name_scope("weighted"):
-                w = tf.Variable(tf.random_uniform([1, embedding_size, 1]), name="weight")
+                w = tf.Variable(tf.random_uniform(
+                    [1, embedding_size, 1]), name="weight")
                 w = tf.tile(w, multiples=[tf.shape(self.input_x)[0], 1, 1])
                 # batch_size, embedding_size, 1
                 w = tf.matmul(self.embedded_chars, w)
@@ -43,22 +56,22 @@ class NBOW(object):
                 # batch_size, sequence_length, embedding_size
                 self.embedded_chars = tf.multiply(self.embedded_chars, w)
                 # batch_size, sequence_length, embedding_size
-        
+
         with tf.name_scope("averaging-layer"):
             mask = tf.sign(self.input_x)
-            # shape: batch_size, sequence_length            
+            # shape: batch_size, sequence_length
 
             range_ = tf.range(
                 start=1, limit=sequence_length + 1, dtype=tf.int32)
             seq_len = tf.reduce_max(tf.multiply(
-                mask, range_), axis=1)            
+                mask, range_), axis=1)
             seq_len = tf.cast(seq_len, dtype=tf.float32)
             # shape: batch_size
 
             divisor = tf.eye(tf.shape(self.input_x)[0])
-            divisor = tf.multiply(divisor, seq_len)            
-            divisor = tf.matrix_inverse(divisor)            
-            # element in seq_len must be all greater than 0 in case the error: input is not invertible            
+            divisor = tf.multiply(divisor, seq_len)
+            divisor = tf.matrix_inverse(divisor)
+            # element in seq_len must be all greater than 0 in case the error: input is not invertible
             # shape: batch_size, batch_size
 
             mask = tf.expand_dims(mask, -1)

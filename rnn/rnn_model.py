@@ -9,7 +9,7 @@ class RNN(object):
 
     def __init__(self, sequence_length, num_classes, vocab_size, embedding_size,
                  hidden_size, num_layers, l2_reg_lambda, dynamic, use_attention,
-                 attention_size):
+                 attention_size, embedding_init, embedding_matrix, static):
         '''
         # TODO: dropout layer before fc layer 
         Args:
@@ -23,6 +23,9 @@ class RNN(object):
             dynamic (boolean):
             use_attention (boolean):
             attention_size (int):
+            embedding_init (boolean): True for initialize the embedding layer with glove false for not 
+            embedding_matrix (list of float): length vocabulary size * embedding_size
+            static (boolean): False for embedding_layer trainable during training false True for not 
         '''
         self.input_x = tf.placeholder(
             tf.int32, [None, sequence_length], name="x")
@@ -38,14 +41,24 @@ class RNN(object):
 
         l2_loss = tf.constant(0.0)
 
-        with tf.name_scope("embedding-layer"):
-            self.W = tf.Variable(
-                tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
-                name="W")
-            embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
-            self.embedded_chars = tf.unstack(
-                embedded_chars, sequence_length, axis=1)
-            # get list (length == sequence_length) of tensors with shape: batch_size, embedding_size
+        if embedding_init:
+            with tf.name_scope("embedding-layer-with-glove-initialized"):
+                self.W = tf.get_variable(shape=[vocab_size, embedding_size], initializer=tf.constant_initializer(
+                    embedding_matrix), name='W', trainable=not static)
+                # initializer can only be constant value or list with N-dimension
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
+        else:
+            with tf.name_scope("embedding-layer"):
+                self.W = tf.Variable(
+                    tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
+                    name="W")
+                self.embedded_chars = tf.nn.embedding_lookup(
+                    self.W, self.input_x)
+
+        self.embedded_chars = tf.unstack(
+            self.embedded_chars, sequence_length, axis=1)
+        # get list (length == sequence_length) of tensors with shape: batch_size, embedding_size        
 
         with tf.name_scope("sequence-length"):
             mask = tf.sign(self.input_x)
