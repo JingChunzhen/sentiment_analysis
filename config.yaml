@@ -12,7 +12,7 @@ CNN:
   filter_sizes: 2,3,5  
   l2_reg_lambda: 0
   embedding_init: True
-  static: True
+  static: False
   
 RNN: 
   hidden_size: 128

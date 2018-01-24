@@ -125,9 +125,9 @@ class EVAL(object):
                         nbow.input_x: x_batch,
                         nbow.input_y: y_batch
                     }
-                    accuracy_, loss_ = sess.run(
-                        [nbow.accuracy, nbow.loss], feed_dict=feed_dict)
-                    return accuracy_, loss_
+                    pred_, accuracy_, loss_ = sess.run(
+                        [nbow.predictions, nbow.accuracy, nbow.loss], feed_dict=feed_dict)
+                    return pred_, accuracy_, loss_
 
                 sess.run(init)
 
@@ -138,17 +138,28 @@ class EVAL(object):
                     print("Training, step: {}, accuracy: {:.2f}, loss: {:.5f}".format(
                         current_step, accuracy_, loss_))
                     current_step = tf.train.global_step(sess, global_step)
+                    
                     if current_step % evaluate_every == 0:
                         print("\nEvaluation:")
+                        
                         losses = []
                         accuracies = []
+
+                        y_true = []
+                        y_pred = []
+
                         for batch in batch_iter(list(zip(self.x_validate, self.y_validate)), 50, 1):
                             x_dev, y_dev = zip(*batch)
-                            accuracy_, loss_ = dev_step(x_dev, y_dev)
+                            pred_, accuracy_, loss_ = dev_step(x_dev, y_dev)
                             accuracies.append(accuracy_)
                             losses.append(loss_)
+                            
+                            y_pred.extend(pred_.tolist()) 
+                            y_true.extend(np.argmax(y_dev, axis=1).tolist())
+
                         print("Evaluation Accuracy: {}, Loss: {}".format(
                             np.mean(accuracies), np.mean(losses)))
+                        print(classification_report(y_true=y_true, y_pred=y_pred))
 
 
 if __name__ == "__main__":

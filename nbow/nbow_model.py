@@ -96,7 +96,7 @@ class NBOW(object):
             l2_loss += tf.nn.l2_loss(b)
             self.scores = tf.nn.xw_plus_b(
                 self.nbow_output, W, b, name="scores")
-            self.predictions = tf.argmax(self.scores, 1, name="predictions")
+            self.predictions = tf.argmax(self.scores, 1, name="predictions")            
 
         with tf.name_scope("loss"):
             losses = tf.nn.softmax_cross_entropy_with_logits(
