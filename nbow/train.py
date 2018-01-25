@@ -12,6 +12,8 @@ from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 
 from nbow_model import NBOW
+from nbow_unformed import NBOW_unformed
+from nbow_fc import NBOW_fc
 from utils.data_parser import batch_iter, load_data
 from itertools import chain
 
@@ -92,7 +94,7 @@ class EVAL(object):
 
         with tf.Graph().as_default():
 
-            nbow = NBOW(
+            nbow = NBOW_fc(
                 sequence_length=self.max_document_length,
                 num_classes=params_global["num_classes"],
                 vocab_size=len(self.processor.vocabulary_),
