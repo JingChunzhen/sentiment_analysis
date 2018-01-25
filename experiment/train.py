@@ -85,7 +85,7 @@ class EVAL(object):
                 "l2_reg_lambda": params["NBOW"]["l2_reg_lamda"],
                 "embedding_init": params["NBOW"]["embedding_init"],
                 "embedding_matrix": embedding_matrix,
-                "static": params[method]["static"]
+                "static": params["NBOW"]["static"]
             },
             "CNN": {
                 "num_classes": params["Global"]["num_classes"],
@@ -128,7 +128,18 @@ class EVAL(object):
                 instance.loss, global_step=global_step)
 
             init = tf.global_variables_initializer()
+
+            tf.summary.scalar("loss", instance.loss)
+            tf.summary.scalar("accuracy", instance.accuracy)
+            merged_summary_op = tf.summary.merge_all()
+
             with tf.Session() as sess:
+
+                sess.run(init)
+                train_summary_writer = tf.summary.FileWriter(
+                    logdir='../temp/summary/{}/train'.format(self.method), graph=sess.graph)
+                dev_summary_writer = tf.summary.FileWriter(
+                    logdir='../temp/summary/{}/dev'.format(self.method), graph=sess.graph)
 
                 def train_step(x_batch, y_batch):
                     feed_dict = {
@@ -143,8 +154,12 @@ class EVAL(object):
                         feed_dict[instance.input_keep_prob] = params[self.method]["input_keep_prob"]
                         feed_dict[instance.output_keep_prob] = params[self.method]["output_keep_prob"]
 
-                    _, step, accuracy_, loss_ = sess.run(
-                        [train_op, global_step, instance.accuracy, instance.loss], feed_dict=feed_dict)
+                    _, summary, step, accuracy_, loss_ = sess.run(
+                        [train_op, merged_summary_op, global_step,
+                            instance.accuracy, instance.loss],
+                        feed_dict=feed_dict)
+                    train_summary_writer.add_summary(summary, step)
+
                     return step, accuracy_, loss_
 
                 def dev_step(x_batch, y_batch):
@@ -160,11 +175,12 @@ class EVAL(object):
                         feed_dict[instance.input_keep_prob] = 1.0
                         feed_dict[instance.output_keep_prob] = 1.0
 
-                    pred_, accuracy_, loss_ = sess.run(
-                        [instance.predictions, instance.accuracy, instance.loss], feed_dict=feed_dict)
+                    pred_, summary, step, accuracy_, loss_ = sess.run(
+                        [instance.predictions, merged_summary_op,
+                            global_step, instance.accuracy, instance.loss],
+                        feed_dict=feed_dict)
+                    dev_summary_writer.add_summary(summary, step)
                     return pred_, accuracy_, loss_
-
-                sess.run(init)
 
                 for batch in batch_iter(list(zip(self.x_train, self.y_train)), batch_size, epochs):
                     x_batch, y_batch = zip(*batch)
@@ -199,10 +215,10 @@ class EVAL(object):
 
 
 if __name__ == "__main__":
-    eval = EVAL("CNN")
+    eval = EVAL("NBOW")
     eval.process(
         learning_rate=1e-3,
         batch_size=128,
-        epochs=100,
-        evaluate_every=1000
+        epochs=5,
+        evaluate_every=100
     )
