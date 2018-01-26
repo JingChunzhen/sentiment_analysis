@@ -31,7 +31,7 @@ RNN:
 NBOW:  
   weighted: True
   l2_reg_lamda: 0.001
-  embedding_init: True
+  embedding_init: False
   static: False
 
   
