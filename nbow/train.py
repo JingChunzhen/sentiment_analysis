@@ -13,6 +13,7 @@ from tensorflow.contrib import learn
 
 from nbow_model import NBOW
 from nbow_unformed import NBOW_unformed
+from nbow_ngram import NBOW_Ngram
 from nbow_fc import NBOW_fc
 from utils.data_parser import batch_iter, load_data
 from itertools import chain
@@ -61,9 +62,8 @@ class EVAL(object):
             x, y, test_size=params_global["test_size"])
         self.x_train, self.x_validate, self.y_train, self.y_validate = train_test_split(
             x_temp, y_temp, test_size=params_global["validate_size"])
-
-        if params["embedding_init"]:
-            self.embedding_matrix = self._embedding_matrix_initializer()
+        
+        self.embedding_matrix = self._embedding_matrix_initializer() if params["embedding_init"] else None
         # free
         del x_temp, y_temp, raw_x, x, y
 
@@ -93,8 +93,8 @@ class EVAL(object):
     def process(self, learning_rate, batch_size, epochs, evaluate_every):
 
         with tf.Graph().as_default():
-
-            nbow = NBOW_fc(
+            embedding_matrix = list(chain.from_iterable(self.embedding_matrix)) if self.embedding_matrix else None
+            nbow = NBOW_Ngram(
                 sequence_length=self.max_document_length,
                 num_classes=params_global["num_classes"],
                 vocab_size=len(self.processor.vocabulary_),
@@ -102,7 +102,7 @@ class EVAL(object):
                 weighted=params["weighted"],
                 l2_reg_lambda=params["l2_reg_lamda"],
                 embedding_init=params["embedding_init"],                
-                embedding_matrix=list(chain.from_iterable(self.embedding_matrix)),
+                embedding_matrix=embedding_matrix,
                 static=params["static"]
             )
 
@@ -162,8 +162,8 @@ class EVAL(object):
                         print("Evaluation Accuracy: {}, Loss: {}".format(
                             np.mean(accuracies), np.mean(losses)))
                         print(classification_report(y_true=y_true, y_pred=y_pred))
-
-
+    
+    
 if __name__ == "__main__":
     eval = EVAL()
     eval.process(

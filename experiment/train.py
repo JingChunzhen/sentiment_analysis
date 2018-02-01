@@ -73,7 +73,7 @@ class EVAL(object):
 
     def _model_config_initializer(self):
         vocab_size = len(self.processor.vocabulary_)
-        embedding_matrix = list(chain.from_iterable(self.embedding_matrix))
+        embedding_matrix = list(chain.from_iterable(self.embedding_matrix)) if self.embedding_matrix else None
         filter_sizes = list(map(int, params["CNN"]["filter_sizes"].split(',')))
         model = {
             "NBOW": {
@@ -219,6 +219,6 @@ if __name__ == "__main__":
     eval.process(
         learning_rate=1e-3,
         batch_size=128,
-        epochs=5,
+        epochs=100,
         evaluate_every=100
     )

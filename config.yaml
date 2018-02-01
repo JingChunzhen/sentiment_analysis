@@ -2,7 +2,7 @@ Global:
   embedding_size: 100
   test_size: 0.2
   validate_size: 0.1
-  #task: Twitter_Airlines
+  # task: Twitter_Airlines
   task: Amazon_Unlocked_Mobile
   num_classes: 3
 
@@ -11,7 +11,7 @@ CNN:
   num_filters: 128
   filter_sizes: 2,3,5  
   l2_reg_lambda: 0
-  embedding_init: True
+  embedding_init: False
   static: False
   
 RNN: 
@@ -25,7 +25,7 @@ RNN:
   attention_size: 50
   input_keep_prob: 1.0
   output_keep_prob: 1.0  
-  embedding_init: True
+  embedding_init: False
   static: False
 
 NBOW:  

@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import MultiRNNCell
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.contrib.rnn import DropoutWrapper
-from attention import attention
+from rnn.attention import attention
 
 
 class RNN(object):
