@@ -99,13 +99,13 @@ def test_nbow_with_softmax():
     embedding_size = 5
     batch_size = 2
     num_classes = 7
-    
+
     x = tf.constant(
         [
             [
                 [4, 8, 3, 4, 1],
                 [3, 4, 9, 8, 5],
-                [5, 7, 3, 9, 1]              
+                [5, 7, 3, 9, 1]
             ],
             [
                 [2, 3, 5, 6, 1],
@@ -114,18 +114,18 @@ def test_nbow_with_softmax():
             ],
         ], dtype=tf.float32
     )
-    
+
     w = tf.Variable(
         tf.random_uniform([embedding_size, num_classes], -1.0, 1.0)
     )
-   
-    res = tf.tensordot(x, w, [[2], [0]]) # (2, 3, 7)    
-    res = tf.nn.softmax(res, dim=2) # (2, 3, 7)
+
+    res = tf.tensordot(x, w, [[2], [0]])  # (2, 3, 7)
+    res = tf.nn.softmax(res, dim=2)  # (2, 3, 7)
     # (2, 3, 7) set 0 for length greater than seqlen
-    # multiply 
-    res = tf.reduce_sum(res, axis=1) # argmax 
+    # multiply
+    res = tf.reduce_sum(res, axis=1)  # argmax
     predict = tf.argmax(res, 1)
-    
+
     init = tf.global_variables_initializer()
 
     with tf.Session() as sess:
@@ -134,6 +134,91 @@ def test_nbow_with_softmax():
         print(np.shape(x_))
         print(x_)
 
+
+def test_avg_pool():
+    # batch_size 2
+    # sequence_length 3
+    # embedding_size 5
+    # num_classes 3
+    input_x = tf.constant(
+        [
+            [
+                [1, 2, -3, 4, -5],
+                [1, -5, 7, -8, 8],
+                [4, -5, 8, 2, 3]
+            ],
+            [
+                [5, -8, -6, 5, 5],
+                [2, 3, 4, -5, 2],
+                [5, -4, -9, 2, -4]
+            ]
+        ], dtype=tf.float32
+    )  # 2, 3 ,5
+
+    # tf.nn.avg_pool()
+    inpt = tf.expand_dims(input_x, -1)
+    print(inpt)
+    # shape: batch_size, sequence_length, embedding_size, 1
+
+    with tf.name_scope("bigram"):
+        w = tf.Variable(tf.truncated_normal([5, 3], stddev=0.1))
+        bigram = tf.nn.avg_pool(
+            inpt, ksize=[1, 2, 1, 1], strides=[1, 1, 1, 1], padding="VALID")
+        # bigram -> ksize = [1, 2, 1, 1]
+        # trigram -> ksize = [1, 3, 1, 1]
+        bigram = tf.squeeze(bigram, 3)
+        bigram = tf.tensordot(bigram, w, [[2], [0]])
+    print(bigram)
+
+    with tf.name_scope("trigram"):
+        trigram = tf.nn.avg_pool(
+            inpt, ksize=[1, 3, 1, 1], strides=[1, 1, 1, 1], padding="VALID")
+        # ksize
+        trigram = tf.squeeze(trigram, 3)
+    print(trigram)
+
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        bg = sess.run(bigram)
+        print(bg)
+        print(np.shape(bg))
+        tg = sess.run(trigram)
+        print(tg)
+        print(np.shape(tg))
+
+
+def test_embedding_lookup():
+    '''
+    '''
+    a = tf.constant(
+        [
+            [2, 1, 1, 5],
+            [2, 3, 4, 5],
+            [2, 3, 4, 3],
+            [5, 2, 6, 3],
+            [6, 3, 2, 6]
+        ], dtype=tf.float16
+    )
+
+    b = tf.constant(
+        [
+            [2, 3, 4],
+            [2, 3, 6],
+            [5, 6, 7],
+            [5, 6, 8]
+        ], dtype=tf.float16
+    )
+
+    c = tf.tensordot(a, b, [[1], [0]])
+    res = tf.nn.embedding_lookup(c, [1, 4])
+
+    with tf.Session() as sess:
+        res_ = sess.run(res)
+        print(res_)
+
 if __name__ == '__main__':
-    test_nbow_with_softmax()
+    # test_nbow_with_softmax()
+    # test_avg_pool()
+    test_embedding_lookup()
     pass
