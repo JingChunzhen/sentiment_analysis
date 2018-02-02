@@ -217,8 +217,29 @@ def test_embedding_lookup():
         res_ = sess.run(res)
         print(res_)
 
+def test_get_variable():
+    #with tf.name_scope("")
+    a = tf.Variable(
+        tf.random_normal([2, 3], name="test_w")
+    )
+    b = tf.get_variable(name="test_w", shape=[2, 3], trainable=False)
+    print(a)
+    print(b)
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        a_, b_ = sess.run([a, b])
+        print(a_)
+        print(b_)
+
+    pass
 if __name__ == '__main__':
     # test_nbow_with_softmax()
     # test_avg_pool()
-    test_embedding_lookup()
+    #test_embedding_lookup()
+    #test_get_variable()
+    a = 100
+    b = 200
+    c = a % b
+    print(c)
     pass

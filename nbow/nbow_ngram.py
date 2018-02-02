@@ -44,10 +44,11 @@ class NBOW_Ngram(object):
             # shape: batch_size, sequence_length, embedding_size
 
         with tf.name_scope("unigram-layer"):
-            w = tf.Variable(tf.truncated_normal(
+            self.unigram_w = tf.Variable(tf.truncated_normal(
                 [embedding_size, num_classes], stddev=0.1), name="unigram_W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            self.unigram = tf.tensordot(self.embedded_chars, w, [[2], [0]])
+            self.unigram = tf.tensordot(
+                self.embedded_chars, self.unigram_w, [[2], [0]])
             # self.unigram = tf.nn.softmax(unigram, dim=-1)
 
         with tf.name_scope("bigram-layer"):
@@ -95,73 +96,15 @@ class NBOW_Ngram(object):
                 self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(
                 tf.cast(correct_predictions, "float"), name="accuracy")
-        
+
         with tf.name_scope("visualization"):
-            embeddings = tf.get_variable(name="embedding_W")
-            unigram_weight = tf.get_variable(name="unigram_W")
-            word_weights = tf.matmul(embeddings, unigram)
+            mask = tf.sign(self.input_x)
+            range_ = tf.range(
+                start=1, limit=sequence_length + 1, dtype=tf.int32)
+            mask = tf.multiply(mask, range_, name="mask")  # element wise
+            self.seq_len = tf.reduce_max(mask, axis=1)
+
+            dist = tf.matmul(self.W, self.unigram_w)
+            dist = tf.nn.softmax(dist, axis=-1)
             # shape: vocab_size, num_classes
-            tf.nn.embedding_lookup(word_weights, )            
-            
-
-
-
-
-
-# test
-'''
-import pandas as pd
-import yaml
-
-with open('../config.yaml', 'rb') as f:
-    param_all = yaml.load(f)
-    params = param_all["NBOW"]
-    params_global = param_all["Global"]
-
-file_name = '../data/Amazon_Unlocked_Mobile.csv'
-df = pd.read_csv(file_name)[:10]
-
-df = df[["Reviews", "Rating"]]
-df = df.dropna(axis=0, how="any")
-
-x = df["Reviews"].tolist()
-labels = df["Rating"].tolist()
-
-y = []
-for label in labels:
-    if label == 1 or label == 2:
-        y.append([0, 0, 1])
-    if label == 3:
-        y.append([0, 1, 0])
-    if label == 4 or label == 5:
-        y.append([1, 0, 0])
-
-import tensorflow as tf
-from tensorflow.contrib import learn
-
-max_document_length = 163
-processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-
-x = list(processor.fit_transform(x))
-
-nbow = NBOW_Ngram(
-    sequence_length=max_document_length,
-    num_classes=params_global["num_classes"],
-    vocab_size=len(processor.vocabulary_),
-    embedding_size=params_global["embedding_size"],
-    weighted=params["weighted"],
-    l2_reg_lambda=params["l2_reg_lamda"],
-    embedding_init=params["embedding_init"],                
-    embedding_matrix=None,
-    static=params["static"]
-)
-
-init = tf.global_variables_initializer()
-
-with tf.Session() as sess:
-    sess.run(init)
-    loss_ = sess.run(
-        [nbow.loss],
-        feed_dict={nbow.input_x: x, nbow.input_y: y})
-    print(loss_)
-'''
+            self.dist = tf.nn.embedding_lookup(dist, self.input_x)
