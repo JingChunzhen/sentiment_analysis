@@ -75,11 +75,11 @@ class NBOW_Ngram(object):
 
         with tf.name_scope("softmax-layer"):
             self.unigram = tf.nn.softmax(self.unigram, axis=-1)
-            self.unigram = tf.reduce_sum(self.unigram, axis=1)
+            self.unigram = tf.reduce_mean(self.unigram, axis=1)
             self.bigram = tf.nn.softmax(self.bigram, axis=-1)
-            self.bigram = tf.reduce_sum(self.bigram, axis=1)
+            self.bigram = tf.reduce_mean(self.bigram, axis=1)
             self.trigram = tf.nn.softmax(self.trigram, axis=-1)
-            self.trigram = tf.reduce_sum(self.trigram, axis=1)
+            self.trigram = tf.reduce_mean(self.trigram, axis=1)
             self.output = self.unigram + self.bigram + self.trigram
 
         with tf.name_scope("predictions"):

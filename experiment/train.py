@@ -26,9 +26,10 @@ class EVAL(object):
 
     def __init__(self, method):
         self.method = method
+        task = params["Global"]["task"]
         raw_x, raw_y = load_data(
-            params["Global"]["task"], params["Global"]["num_classes"])
-        self.max_document_length = 163
+            task, params["Global"]["num_classes"])
+        self.max_document_length = params[task]["max_document_length"]
 
         self.processor = learn.preprocessing.VocabularyProcessor(
             self.max_document_length)
@@ -37,6 +38,7 @@ class EVAL(object):
         raw_x = list(self.processor.transform(raw_x))
 
         x, y = [], []
+        # following code can be optimized 
         for tmp_x, tmp_y in zip(raw_x, raw_y):
             tmp_x = tmp_x.tolist()
             if np.sum(tmp_x) != 0:
@@ -73,7 +75,8 @@ class EVAL(object):
 
     def _model_config_initializer(self):
         vocab_size = len(self.processor.vocabulary_)
-        embedding_matrix = list(chain.from_iterable(self.embedding_matrix)) if self.embedding_matrix else None
+        embedding_matrix = list(chain.from_iterable(
+            self.embedding_matrix)) if self.embedding_matrix else None
         filter_sizes = list(map(int, params["CNN"]["filter_sizes"].split(',')))
         model = {
             "NBOW": {

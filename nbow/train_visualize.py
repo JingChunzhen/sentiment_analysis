@@ -20,9 +20,7 @@ from utils.data_parser import batch_iter, load_data
 from itertools import chain
 
 with open('../config.yaml', 'rb') as f:
-    param_all = yaml.load(f)
-    params = param_all["NBOW"]
-    params_global = param_all["Global"]
+    params = yaml.load(f)
 
 
 class EVAL(object):
@@ -33,21 +31,24 @@ class EVAL(object):
         get the map of word to ids 
         get the split of train, dev and test data and labels                
         '''
+        task = params["Global"]["task"]
         raw_x, raw_y = load_data(
-            params_global["task"], params_global["num_classes"])
-        self.max_document_length = 163
+            task, params["Global"]["num_classes"])
+        self.max_document_length = params[task]["max_document_length"]
 
-        # if os.path.exists(params_global["vocabulray"]):
-        #     self.processor = learn.preprocessing.VocabularyProcessor.restore(
-        #         "../temp/data/test_vocabulary_processor")
-        # else:
-        #     self.processor = learn.preprocessing.VocabularyProcessor(
-        #         self.max_document_length)
-        #     self.processor.fit(raw_x)
+        if os.path.exists("../temp/vocabulary/{}.vocab".format(task)):
+            self.processor = learn.preprocessing.VocabularyProcessor.restore(
+                "../temp/vocabulary/{}.vocab".format(task))
+        else:
+            self.processor = learn.preprocessing.VocabularyProcessor(
+                self.max_document_length)
+            self.processor.fit(raw_x)
+            self.processor.save(
+                "../temp/vocabulary/{}.vocab".format(task))
 
-        self.processor = learn.preprocessing.VocabularyProcessor(
-            self.max_document_length)
-        self.processor.fit(raw_x)
+        # self.processor = learn.preprocessing.VocabularyProcessor(
+        #     self.max_document_length)
+        # self.processor.fit(raw_x)
 
         raw_x = list(self.processor.transform(raw_x))
 
@@ -60,12 +61,12 @@ class EVAL(object):
                 y.append(tmp_y)
 
         x_temp, self.x_test, y_temp, self.y_test = train_test_split(
-            x, y, test_size=params_global["test_size"])
+            x, y, test_size=params["Global"]["test_size"])
         self.x_train, self.x_validate, self.y_train, self.y_validate = train_test_split(
-            x_temp, y_temp, test_size=params_global["validate_size"])
+            x_temp, y_temp, test_size=params["Global"]["validate_size"])
 
         self.embedding_matrix = self._embedding_matrix_initializer(
-        ) if params["embedding_init"] else None
+        ) if params["NBOW"]["embedding_init"] else None
         self.instance = None
         # free
         del x_temp, y_temp, raw_x, x, y
@@ -77,7 +78,7 @@ class EVAL(object):
             embedding_matrix (matrix with float): shape (vocabulary_size, embedding_size)
         '''
         file_wv = "../data/glove.6B/glove.6B.{}d.txt".format(
-            params_global["embedding_size"])
+            params["Global"]["embedding_size"])
         wv = {}
         embedding_matrix = []
 
@@ -90,7 +91,7 @@ class EVAL(object):
         for idx in range(len(self.processor.vocabulary_)):
             word = self.processor.vocabulary_.reverse(idx)
             embedding_matrix.append(
-                wv[word] if word in wv else np.random.normal(size=params_global["embedding_size"]))
+                wv[word] if word in wv else np.random.normal(size=params["Global"]["embedding_size"]))
         return embedding_matrix
 
     def process(self, learning_rate, batch_size, epochs, evaluate_every):
@@ -100,14 +101,14 @@ class EVAL(object):
                 self.embedding_matrix)) if self.embedding_matrix else None
             self.instance = NBOW_Ngram(
                 sequence_length=self.max_document_length,
-                num_classes=params_global["num_classes"],
+                num_classes=params["Global"]["num_classes"],
                 vocab_size=len(self.processor.vocabulary_),
-                embedding_size=params_global["embedding_size"],
-                weighted=params["weighted"],
-                l2_reg_lambda=params["l2_reg_lamda"],
-                embedding_init=params["embedding_init"],
+                embedding_size=params["Global"]["embedding_size"],
+                weighted=params["NBOW"]["weighted"],
+                l2_reg_lambda=params["NBOW"]["l2_reg_lamda"],
+                embedding_init=params["NBOW"]["embedding_init"],
                 embedding_matrix=embedding_matrix,
-                static=params["static"]
+                static=params["NBOW"]["static"]
             )
 
             global_step = tf.Variable(0, trainable=False)
@@ -182,12 +183,16 @@ class EVAL(object):
                             y_true=y_true, y_pred=y_pred))
 
                     if current_step % 4000 == 0:
-                        saver.save(sess, "../temp/model/nbow_ngram",
+                        saver.save(sess, "../temp/model/nbow_ngram/nbow_ngram",
                                    global_step=current_step)
-                    if current_step % 10000 == 0:
+                    if current_step % 5000 == 0:
                         data = list(self._generate(sess))
-                        df = pd.DataFrame(
-                            data, columns=["word", "positive", "neutral", "negative"])
+                        if params["Global"]["num_classes"] == 3:
+                            df = pd.DataFrame(
+                                data, columns=["word", "positive", "neutral", "negative"])
+                        else:
+                            df = pd.DataFrame(
+                                data, columns=["word", "positive", "negative"])
                         df.to_csv(
                             '../temp/visualization/{}.csv'.format(current_step))
 
@@ -218,20 +223,22 @@ def visualization(file_in):
     df = pd.read_csv(file_in)
     words = df["word"].tolist()
     positive = df["positive"].tolist()
-    neutral = df["neutral"].tolist()
+    if params["Global"]["num_classes"] == 3:
+        neutral = df["neutral"].tolist()
     negative = df["negative"].tolist()
     bar = Bar("")
     bar.add("positive", words, positive, is_stack=True,
-            xaxis_interval=0, label_color=["#4682B4"]) #4682B4
-    bar.add("neutral", words, neutral, is_stack=True,
-            xaxis_interval=0, label_color=["#E3E3E3"])
+            xaxis_interval=0, label_color=["#4682B4"])
+    if params["Global"]["num_classes"] == 3:
+        bar.add("neutral", words, neutral, is_stack=True,
+                xaxis_interval=0, label_color=["#E3E3E3"])
     bar.add("negative", words, negative, is_stack=True,
-            xaxis_interval=0, label_color=["#CD3333"]) 
+            xaxis_interval=0, label_color=["#CD3333"])
     bar.render("../temp/visualization/bar_negative.html")
 
 
 if __name__ == "__main__":
-    '''
+
     eval = EVAL()
     eval.process(
         learning_rate=1e-3,
@@ -241,4 +248,5 @@ if __name__ == "__main__":
     )
     '''
     visualization("../data/negative_review.csv")
-    #visualization("../data/positive_review.csv")
+    '''
+    # visualization("../data/positive_review.csv")

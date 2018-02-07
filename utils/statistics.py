@@ -50,6 +50,9 @@ def statistics_amazon():
 
 
 def statistics_processor():            
+    """
+    deprecated
+    """
     x, y = load_data()
     l = [len(text.split(' ')) for text in x]
     max_document_length = max(l)

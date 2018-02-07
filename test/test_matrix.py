@@ -233,6 +233,12 @@ def test_get_variable():
         print(b_)
 
     pass
+
+def test_optimization_using_vectorization():
+    """
+    """
+    np.vectorize()
+    pass
 if __name__ == '__main__':
     # test_nbow_with_softmax()
     # test_avg_pool()
