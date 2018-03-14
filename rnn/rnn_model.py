@@ -104,6 +104,7 @@ class RNN(object):
                 )
 
         if dynamic:
+            """
             with tf.name_scope("dynamic-rnn-with-{}-layers".format(num_layers)):
                 outputs, _, _ = tf.nn.static_bidirectional_rnn(
                     inputs=self.embedded_chars,
@@ -117,6 +118,26 @@ class RNN(object):
 
                 outputs = tf.stack(outputs)
                 outputs = tf.transpose(outputs, [1, 0, 2])
+                # shape: batch_size, sequence_length, hidden_size * 2
+                batch_size = tf.shape(outputs)[0]
+                index = tf.range(0, batch_size) * \
+                    sequence_length + (self.seq_len - 1)
+                self.rnn_output = tf.gather(tf.reshape(
+                    outputs, [-1, hidden_size * 2]), index)
+                # shape: batch_size, hidden_size * 2
+            """
+            with tf.name_scope("dynamic-rnn-with-{}-layers".format(num_layers)):
+                self.embedded_chars = tf.stack(self.embedded_chars)
+                self.embedded_chars = tf.transpose(self.embedded_chars, [1, 0, 2])
+                outputs, _ = tf.nn.bidirectional_dynamic_rnn(
+                    inputs=self.embedded_chars,
+                    cell_fw=self.cell_fw,
+                    cell_bw=self.cell_bw,
+                    sequence_length=self.seq_len,
+                    dtype=tf.float32
+                )
+                output_fw, output_bw = outputs
+                outputs = tf.concat([output_fw, output_bw], axis=2)
                 # shape: batch_size, sequence_length, hidden_size * 2
                 batch_size = tf.shape(outputs)[0]
                 index = tf.range(0, batch_size) * \
