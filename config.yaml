@@ -20,11 +20,11 @@ RNN:
   l2_reg_lambda: 0.0001
   cell_type: GRU
   bi-directional: True
-  dynamic: True
-  use_attention: False
+  dynamic: False
+  use_attention: True
   attention_size: 50
-  input_keep_prob: 1.0
-  output_keep_prob: 1.0  
+  input_keep_prob: 0.5
+  output_keep_prob: 0.5
   embedding_init: False
   static: False
 

@@ -147,17 +147,20 @@ class RNN(object):
                 # shape: batch_size, hidden_size * 2
         else:
             if use_attention:
+                self.embedded_chars = tf.stack(self.embedded_chars)
+                self.embedded_chars = tf.transpose(self.embedded_chars, [1, 0, 2])
                 with tf.name_scope("rnn-based-attention-with-{}-layers".format(num_layers)):
-                    outputs, _, _ = tf.nn.static_bidirectional_rnn(
+                    outputs, _ = tf.nn.bidirectional_dynamic_rnn(
                         inputs=self.embedded_chars,
                         cell_fw=self.cell_fw,
                         cell_bw=self.cell_bw,
+                        sequence_length=self.seq_len,
                         dtype=tf.float32
                     )
 
-                    outputs = tf.stack(outputs)
-                    outputs = tf.transpose(outputs, [1, 0, 2])
-                    self.rnn_output, alpha = attention(outputs, attention_size)
+                    output_fw, output_bw = outputs
+                    outputs = tf.concat([output_fw, output_bw], axis=2)                    
+                    self.rnn_output, self.alpha = attention(outputs, attention_size)
             else:
                 with tf.name_scope("rnn-with-{}-layers".format(num_layers)):
                     outputs, _, _ = tf.nn.static_bidirectional_rnn(
